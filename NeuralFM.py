@@ -4,7 +4,7 @@ Xiangnan He, Tat-Seng Chua. Neural Factorization Machines for Sparse Predictive 
 
 This is a deep version of factorization machine and is more expressive than FM.
 
-@author: 
+@author:
 Xiangnan He (xiangnanhe@gmail.com)
 Lizi Liao (liaolizi.llz@gmail.com)
 
@@ -41,7 +41,7 @@ def parse_args():
                         help='Number of hidden factors.')
     parser.add_argument('--layers', nargs='?', default='[64]',
                         help="Size of each layer.")
-    parser.add_argument('--keep_prob', nargs='?', default='[0.8,0.5]', 
+    parser.add_argument('--keep_prob', nargs='?', default='[0.8,0.5]',
                         help='Keep probability (i.e., 1-dropout_ratio) for each deep layer and the Bi-Interaction layer. 1: no dropout. Note that the last index is for the Bi-Interaction layer.')
     parser.add_argument('--lamda', type=float, default=0,
                         help='Regularizer for bilinear part.')
@@ -83,8 +83,8 @@ class NeuralFM(BaseEstimator, TransformerMixin):
         self.activation_function = activation_function
         self.early_stop = early_stop
         # performance of each epoch
-        self.train_rmse, self.valid_rmse, self.test_rmse = [], [], [] 
-        
+        self.train_rmse, self.valid_rmse, self.test_rmse = [], [], []
+
         # init all variables in a tensorflow graph
         self._init_graph()
 
@@ -118,7 +118,7 @@ class NeuralFM(BaseEstimator, TransformerMixin):
             self.squared_sum_features_emb = tf.reduce_sum(self.squared_features_emb, 1)  # None * K
 
             # ________ FM __________
-            self.FM = 0.5 * tf.sub(self.summed_features_emb_square, self.squared_sum_features_emb)  # None * K
+            self.FM = 0.5 * tf.substract(self.summed_features_emb_square, self.squared_sum_features_emb)  # None * K
             if self.batch_norm:
                 self.FM = self.batch_norm_layer(self.FM, train_phase=self.train_phase, scope_bn='bn_fm')
             self.FM = tf.nn.dropout(self.FM, self.dropout_keep[-1]) # dropout at the bilinear interactin layer
@@ -141,15 +141,15 @@ class NeuralFM(BaseEstimator, TransformerMixin):
             # Compute the loss.
             if self.loss_type == 'square_loss':
                 if self.lamda_bilinear > 0:
-                    self.loss = tf.nn.l2_loss(tf.sub(self.train_labels, self.out)) + tf.contrib.layers.l2_regularizer(self.lamda_bilinear)(self.weights['feature_embeddings'])  # regulizer
+                    self.loss = tf.nn.l2_loss(tf.substract(self.train_labels, self.out)) + tf.contrib.layers.l2_regularizer(self.lamda_bilinear)(self.weights['feature_embeddings'])  # regulizer
                 else:
-                    self.loss = tf.nn.l2_loss(tf.sub(self.train_labels, self.out))
+                    self.loss = tf.nn.l2_loss(tf.substract(self.train_labels, self.out))
             elif self.loss_type == 'log_loss':
                 self.out = tf.sigmoid(self.out)
-                if self.lambda_bilinear > 0:
-                    self.loss = tf.contrib.losses.log_loss(self.out, self.train_labels, weight=1.0, epsilon=1e-07, scope=None) + tf.contrib.layers.l2_regularizer(self.lamda_bilinear)(self.weights['feature_embeddings'])  # regulizer
+                if self.lamda_bilinear > 0:
+                    self.loss = tf.contrib.losses.log_loss(self.out, self.train_labels, weights=1.0, epsilon=1e-07, scope=None) + tf.contrib.layers.l2_regularizer(self.lamda_bilinear)(self.weights['feature_embeddings'])  # regulizer
                 else:
-                    self.loss = tf.contrib.losses.log_loss(self.out, self.train_labels, weight=1.0, epsilon=1e-07, scope=None)
+                    self.loss = tf.contrib.losses.log_loss(self.out, self.train_labels, weights=1.0, epsilon=1e-07, scope=None)
 
             # Optimizer.
             if self.optimizer_type == 'AdamOptimizer':
@@ -176,12 +176,12 @@ class NeuralFM(BaseEstimator, TransformerMixin):
                     variable_parameters *= dim.value
                 total_parameters += variable_parameters
             if self.verbose > 0:
-                print "#params: %d" %total_parameters 
+                print "#params: %d" %total_parameters
 
     def _initialize_weights(self):
         all_weights = dict()
         if self.pretrain_flag > 0: # with pretrain
-            pretrain_file = '../pretrain/%s_%d/%s_%d' %(args.dataset, args.hidden_factor, args.dataset, args.hidden_factor)  
+            pretrain_file = '../pretrain/%s_%d/%s_%d' %(args.dataset, args.hidden_factor, args.dataset, args.hidden_factor)
             weight_saver = tf.train.import_meta_graph(pretrain_file + '.meta')
             pretrain_graph = tf.get_default_graph()
             feature_embeddings = pretrain_graph.get_tensor_by_name('feature_embeddings:0')
@@ -267,7 +267,7 @@ class NeuralFM(BaseEstimator, TransformerMixin):
             init_valid = self.evaluate(Validation_data)
             init_test = self.evaluate(Test_data)
             print("Init: \t train=%.4f, validation=%.4f, test=%.4f [%.1f s]" %(init_train, init_valid, init_test, time()-t2))
-        
+
         for epoch in xrange(self.epoch):
             t1 = time()
             self.shuffle_in_unison_scary(Train_data['X'], Train_data['Y'])
@@ -278,17 +278,17 @@ class NeuralFM(BaseEstimator, TransformerMixin):
                 # Fit training
                 self.partial_fit(batch_xs)
             t2 = time()
-            
+
             # output validation
             train_result = self.evaluate(Train_data)
             valid_result = self.evaluate(Validation_data)
             test_result = self.evaluate(Test_data)
-            
+
             self.train_rmse.append(train_result)
             self.valid_rmse.append(valid_result)
             self.test_rmse.append(test_result)
             if self.verbose > 0 and epoch%self.verbose == 0:
-                print("Epoch %d [%.1f s]\ttrain=%.4f, validation=%.4f, test=%.4f [%.1f s]" 
+                print("Epoch %d [%.1f s]\ttrain=%.4f, validation=%.4f, test=%.4f [%.1f s]"
                       %(epoch+1, t2-t1, train_result, valid_result, test_result, time()-t2))
             if self.early_stop > 0 and self.eva_termination(self.valid_rmse):
                 #print "Early stop at %d based on validation result." %(epoch+1)
@@ -311,7 +311,7 @@ class NeuralFM(BaseEstimator, TransformerMixin):
         predictions = self.sess.run((self.out), feed_dict=feed_dict)
         y_pred = np.reshape(predictions, (num_example,))
         y_true = np.reshape(data['Y'], (num_example,))
-        if self.loss_type == 'square_loss':    
+        if self.loss_type == 'square_loss':
             predictions_bounded = np.maximum(y_pred, np.ones(num_example) * min(y_true))  # bound the lower values
             predictions_bounded = np.minimum(predictions_bounded, np.ones(num_example) * max(y_true))  # bound the higher values
             RMSE = math.sqrt(mean_squared_error(y_true, predictions_bounded))
@@ -319,8 +319,8 @@ class NeuralFM(BaseEstimator, TransformerMixin):
         elif self.loss_type == 'log_loss':
             logloss = log_loss(y_true, y_pred) # I haven't checked the log_loss
             return logloss
-'''         # for testing the classification accuracy  
-            predictions_binary = [] 
+'''         # for testing the classification accuracy
+            predictions_binary = []
             for item in y_pred:
                 if item > 0.5:
                     predictions_binary.append(1.0)
@@ -334,7 +334,7 @@ if __name__ == '__main__':
     args = parse_args()
     data = DATA.LoadData(args.path, args.dataset, args.loss_type)
     if args.verbose > 0:
-        print("Neural FM: dataset=%s, hidden_factor=%d, dropout_keep=%s, layers=%s, loss_type=%s, pretrain=%d, #epoch=%d, batch=%d, lr=%.4f, lambda=%.4f, optimizer=%s, batch_norm=%d, activation=%s, early_stop=%d" 
+        print("Neural FM: dataset=%s, hidden_factor=%d, dropout_keep=%s, layers=%s, loss_type=%s, pretrain=%d, #epoch=%d, batch=%d, lr=%.4f, lamda=%.4f, optimizer=%s, batch_norm=%d, activation=%s, early_stop=%d"
               %(args.dataset, args.hidden_factor, args.keep_prob, args.layers, args.loss_type, args.pretrain, args.epoch, args.batch_size, args.lr, args.lamda, args.optimizer, args.batch_norm, args.activation, args.early_stop))
     activation_function = tf.nn.relu
     if args.activation == 'sigmoid':
@@ -348,7 +348,7 @@ if __name__ == '__main__':
     t1 = time()
     model = NeuralFM(data.features_M, args.hidden_factor, eval(args.layers), args.loss_type, args.pretrain, args.epoch, args.batch_size, args.lr, args.lamda, eval(args.keep_prob), args.optimizer, args.batch_norm, activation_function, args.verbose, args.early_stop)
     model.train(data.Train_data, data.Validation_data, data.Test_data)
-    
+
     # Find the best validation result across iterations
     best_valid_score = 0
     if args.loss_type == 'square_loss':
@@ -356,5 +356,5 @@ if __name__ == '__main__':
     elif args.loss_type == 'log_loss':
         best_valid_score = max(model.valid_rmse)
     best_epoch = model.valid_rmse.index(best_valid_score)
-    print ("Best Iter(validation)= %d\t train = %.4f, valid = %.4f, test = %.4f [%.1f s]" 
+    print ("Best Iter(validation)= %d\t train = %.4f, valid = %.4f, test = %.4f [%.1f s]"
            %(best_epoch+1, model.train_rmse[best_epoch], model.valid_rmse[best_epoch], model.test_rmse[best_epoch], time()-t1))

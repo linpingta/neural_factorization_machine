@@ -4,7 +4,7 @@ Xiangnan He, Tat-Seng Chua. Neural Factorization Machines for Sparse Predictive 
 
 Note that the original paper of FM is: Steffen Rendle. Factorization Machines. In Proc. of ICDM 2010.
 
-@author: 
+@author:
 Xiangnan He (xiangnanhe@gmail.com)
 Lizi Liao (liaolizi.llz@gmail.com)
 
@@ -40,7 +40,7 @@ def parse_args():
                         help='Number of hidden factors.')
     parser.add_argument('--lamda', type=float, default=0,
                         help='Regularizer for bilinear part.')
-    parser.add_argument('--keep_prob', type=float, default=0.5, 
+    parser.add_argument('--keep_prob', type=float, default=0.5,
                     help='Keep probility (1-dropout_ratio) for the Bi-Interaction layer. 1: no dropout')
     parser.add_argument('--lr', type=float, default=0.05,
                         help='Learning rate.')
@@ -109,7 +109,7 @@ class FM(BaseEstimator, TransformerMixin):
             self.squared_sum_features_emb = tf.reduce_sum(self.squared_features_emb, 1)  # None * K
 
             # ________ FM __________
-            self.FM = 0.5 * tf.sub(self.summed_features_emb_square, self.squared_sum_features_emb)  # None * K
+            self.FM = 0.5 * tf.substract(self.summed_features_emb_square, self.squared_sum_features_emb)  # None * K
             if self.batch_norm:
                 self.FM = self.batch_norm_layer(self.FM, train_phase=self.train_phase, scope_bn='bn_fm')
             self.FM = tf.nn.dropout(self.FM, self.dropout_keep) # dropout at the FM layer
@@ -123,9 +123,9 @@ class FM(BaseEstimator, TransformerMixin):
             # Compute the loss.
             if self.loss_type == 'square_loss':
                 if self.lamda_bilinear > 0:
-                    self.loss = tf.nn.l2_loss(tf.sub(self.train_labels, self.out)) + tf.contrib.layers.l2_regularizer(self.lamda_bilinear)(self.weights['feature_embeddings'])  # regulizer
+                    self.loss = tf.nn.l2_loss(tf.substract(self.train_labels, self.out)) + tf.contrib.layers.l2_regularizer(self.lamda_bilinear)(self.weights['feature_embeddings'])  # regulizer
                 else:
-                    self.loss = tf.nn.l2_loss(tf.sub(self.train_labels, self.out))
+                    self.loss = tf.nn.l2_loss(tf.substract(self.train_labels, self.out))
             elif self.loss_type == 'log_loss':
                 self.out = tf.sigmoid(self.out)
                 if self.lambda_bilinear > 0:
@@ -158,7 +158,7 @@ class FM(BaseEstimator, TransformerMixin):
                     variable_parameters *= dim.value
                 total_parameters += variable_parameters
             if self.verbose > 0:
-                print "#params: %d" %total_parameters 
+                print "#params: %d" %total_parameters
 
     def _initialize_weights(self):
         all_weights = dict()
@@ -281,7 +281,7 @@ class FM(BaseEstimator, TransformerMixin):
         predictions = self.sess.run((self.out), feed_dict=feed_dict)
         y_pred = np.reshape(predictions, (num_example,))
         y_true = np.reshape(data['Y'], (num_example,))
-        if self.loss_type == 'square_loss':    
+        if self.loss_type == 'square_loss':
             predictions_bounded = np.maximum(y_pred, np.ones(num_example) * min(y_true))  # bound the lower values
             predictions_bounded = np.minimum(predictions_bounded, np.ones(num_example) * max(y_true))  # bound the higher values
             RMSE = math.sqrt(mean_squared_error(y_true, predictions_bounded))
@@ -289,8 +289,8 @@ class FM(BaseEstimator, TransformerMixin):
         elif self.loss_type == 'log_loss':
             logloss = log_loss(y_true, y_pred) # I haven't checked the log_loss
             return logloss
-'''         # for testing the classification accuracy  
-            predictions_binary = [] 
+'''         # for testing the classification accuracy
+            predictions_binary = []
             for item in y_pred:
                 if item > 0.5:
                     predictions_binary.append(1.0)
@@ -312,7 +312,7 @@ if __name__ == '__main__':
     t1 = time()
     model = FM(data.features_M, args.pretrain, save_file, args.hidden_factor, args.loss_type, args.epoch, args.batch_size, args.lr, args.lamda, args.keep_prob, args.optimizer, args.batch_norm, args.verbose)
     model.train(data.Train_data, data.Validation_data, data.Test_data)
-    
+
     # Find the best validation result across iterations
     best_valid_score = 0
     if args.loss_type == 'square_loss':
@@ -320,5 +320,5 @@ if __name__ == '__main__':
     elif args.loss_type == 'log_loss':
         best_valid_score = max(model.valid_rmse)
     best_epoch = model.valid_rmse.index(best_valid_score)
-    print ("Best Iter(validation)= %d\t train = %.4f, valid = %.4f, test = %.4f [%.1f s]" 
+    print ("Best Iter(validation)= %d\t train = %.4f, valid = %.4f, test = %.4f [%.1f s]"
            %(best_epoch+1, model.train_rmse[best_epoch], model.valid_rmse[best_epoch], model.test_rmse[best_epoch], time()-t1))
